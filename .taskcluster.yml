@@ -28,5 +28,32 @@ tasks:
           description: "Tests for a little rust demo project"
           owner: "{{ event.head.user.email }}"
           source: "{{ event.head.repo.url }}"
+version: 1
+reporting: checks-v1
+policy:
+  pullRequests: public
+tasks:
+  $let:
+    head_rev:
+      $switch:
+        tasks_for == "github-pull-request": ${event.pull_request.head.sha}
+        tasks_for == "github-push": ${event.after}
+        $default: UNKNOWN
+    repository:
+      $if: tasks_for == "github-pull-request"
+      then: ${event.pull_request.head.repo.html_url}
+      else: ${event.repository.html_url}
+  in:
+    $match:
+      tasks_for == "github-pull-request" && event["action"] in ["opened", "synchronize"]:
+        taskId:
+          $eval: as_slugid("test")
+        deadline:
+          $fromNow: 1 day
+        taskQueueId: proj-misc/tutorial
+        metadata:
+          owner: ${event.sender.login}@users.noreply.github.com
+          source: ${event.repository.url}
+        payload:
 
 
